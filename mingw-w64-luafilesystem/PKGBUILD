@@ -5,7 +5,6 @@ pkgbase=mingw-w64-${_realname}
 pkgname=("${MINGW_PACKAGE_PREFIX}-lua-${_realname}"
          "${MINGW_PACKAGE_PREFIX}-lua51-${_realname}"
          "${MINGW_PACKAGE_PREFIX}-lua53-${_realname}")
-_tagver=1_8_0
 pkgver=1.8.0
 pkgrel=1
 arch=('any')
@@ -13,146 +12,102 @@ mingw_arch=('mingw64' 'ucrt64' 'clang64' 'clangarm64')
 url='https://github.com/lunarmodules/luafilesystem'
 license=('spdx:MIT')
 makedepends=("${MINGW_PACKAGE_PREFIX}-cc"
+             "${MINGW_PACKAGE_PREFIX}-cmake"
+             "${MINGW_PACKAGE_PREFIX}-ninja"
              "${MINGW_PACKAGE_PREFIX}-lua"
              "${MINGW_PACKAGE_PREFIX}-lua51"
              "${MINGW_PACKAGE_PREFIX}-lua53"
              "${MINGW_PACKAGE_PREFIX}-pkgconf")
+_tagver=$(echo ${pkgver} | sed -e "s/\./_/g")
 source=("${url}/archive/refs/tags/v${_tagver}.tar.gz"
-        "001-makefile-for-mingw.patch")
+        "001-add-cmake-script-for-MSYS2-MINGW-packages.patch")
 sha256sums=('16d17c788b8093f2047325343f5e9b74cccb1ea96001e45914a58bbae8932495'
-            '4eacf6828e8a4e1fedf48c704a5df5fb4d09e6357c0d72a265704a76cc33507f')
+            '11fa5920a43f979c1800dbce4e43a6921c9c8f1c28bfe1d21e8670b9c713dcef')
 
 prepare() {
-  cd "${srcdir}/${_realname}-${_tagver}"
-  patch -Np1 -i ${srcdir}/001-makefile-for-mingw.patch
+  cd "${_realname}-${_tagver}"
 
-  cd ${srcdir}
-
-  cp -r "${srcdir}/${_realname}-${_tagver}" "${srcdir}/${_realname}-${_tagver}-51"
-  cp -r "${srcdir}/${_realname}-${_tagver}" "${srcdir}/${_realname}-${_tagver}-53"
-
-  # current Lua
-  _lua_ver=$(pkgconf --variable=V lua)
-  _lua_ver_short=$(echo $_lua_ver | sed -En "s/\.//p")
-
-  _options=("--file=Makefile.mingw"
-            "PREFIX=${MINGW_PREFIX}"
-            "LUA_VERSION=${_lua_ver}"
-            "LUA_VERSION_SHORT=${_lua_ver_short}"
-            "LUA_EXE_NAME=lua"
-            "LUA_INC=${MINGW_PREFIX}/include"
-            "")
-
-  sed -e "s/\#\!\/usr\/bin\/env lua5\.1/\#\!\/usr\/bin\/env lua/" \
-      -i "${srcdir}/${_realname}-${_tagver}"/tests/test.lua
-
-  # Lua 5.1
-  _lua_ver51=$(pkgconf --variable=V lua5.1)
-  _lua_ver_short51=$(echo $_lua_ver51 | sed -En "s/\.//p")
-
-  _options51=("--file=Makefile.mingw"
-              "PREFIX=${MINGW_PREFIX}"
-              "LUA_VERSION=${_lua_ver51}"
-              "LUA_VERSION_SHORT=${_lua_ver_short51}"
-              "")
-  
-  # Lua 5.3
-  _lua_ver53=$(pkgconf --variable=V lua5.3)
-  _lua_ver_short53=$(echo $_lua_ver53 | sed -En "s/\.//p")
-
-  _options53=("--file=Makefile.mingw"
-              "PREFIX=${MINGW_PREFIX}"
-              "LUA_VERSION=${_lua_ver53}"
-              "LUA_VERSION_SHORT=${_lua_ver_short53}"
-              "")
-
-  sed -e "s/\#\!\/usr\/bin\/env lua5\.1/\#\!\/usr\/bin\/env lua${_lua_ver53}/" \
-      -i "${srcdir}/${_realname}-${_tagver}-53"/tests/test.lua
+  patch -Np1 -i ${srcdir}/001-add-cmake-script-for-MSYS2-MINGW-packages.patch
 }
 
 build() {
-  # current Lua
-  cd "${srcdir}/${_realname}-${_tagver}"
+  declare -a extra_config
+  if check_option "debug" "n"; then
+    extra_config+=("-DCMAKE_BUILD_TYPE=Release")
+  else
+    extra_config+=("-DCMAKE_BUILD_TYPE=Debug")
+  fi
 
-  make \
-    "${_options[@]}" \
-    all
+  # current Lua
+  MSYS2_ARG_CONV_EXCL="-DCMAKE_INSTALL_PREFIX=" \
+    "${MINGW_PREFIX}"/bin/cmake.exe \
+      -GNinja \
+      -DCMAKE_INSTALL_PREFIX="${MINGW_PREFIX}" \
+      "${extra_config[@]}" \
+      -DIS_CURRENT_VERSION=ON \
+      -S "${_realname}-${_tagver}" \
+      -B "build-${MSYSTEM}"
+
+  "${MINGW_PREFIX}"/bin/cmake.exe --build "build-${MSYSTEM}"
 
   # Lua 5.1
-  cd "${srcdir}/${_realname}-${_tagver}-51"
+  MSYS2_ARG_CONV_EXCL="-DCMAKE_INSTALL_PREFIX=" \
+    "${MINGW_PREFIX}"/bin/cmake.exe \
+      -GNinja \
+      -DCMAKE_INSTALL_PREFIX="${MINGW_PREFIX}" \
+      "${extra_config[@]}" \
+      -DLUA_VERSION=5.1 \
+      -S "${_realname}-${_tagver}" \
+      -B "build-${MSYSTEM}-51"
 
-  make \
-    "${_options51[@]}" \
-    all
+  "${MINGW_PREFIX}"/bin/cmake.exe --build "build-${MSYSTEM}-51"
 
   # Lua 5.3
-  cd "${srcdir}/${_realname}-${_tagver}-53"
+  MSYS2_ARG_CONV_EXCL="-DCMAKE_INSTALL_PREFIX=" \
+    "${MINGW_PREFIX}"/bin/cmake.exe \
+      -GNinja \
+      -DCMAKE_INSTALL_PREFIX="${MINGW_PREFIX}" \
+      "${extra_config[@]}" \
+      -DLUA_VERSION=5.3 \
+      -S "${_realname}-${_tagver}" \
+      -B "build-${MSYSTEM}-53"
 
-  make \
-    "${_options53[@]}" \
-    all
+  "${MINGW_PREFIX}"/bin/cmake.exe --build "build-${MSYSTEM}-53"
 }
 
 check() {
-  # current Lua
-  cd "${srcdir}/${_realname}-${_tagver}"
+  "${MINGW_PREFIX}"/bin/cmake.exe --build "build-${MSYSTEM}" --target test
 
-  make \
-    "${_options[@]}" \
-    check
+  "${MINGW_PREFIX}"/bin/cmake.exe --build "build-${MSYSTEM}-51" --target test
 
-  # Lua 5.1
-  cd "${srcdir}/${_realname}-${_tagver}-51"
-
-  make \
-    "${_options51[@]}" \
-    check
-
-  # Lua 5.3
-  cd "${srcdir}/${_realname}-${_tagver}-53"
-
-  make \
-    "${_options53[@]}" \
-    check
+  "${MINGW_PREFIX}"/bin/cmake.exe --build "build-${MSYSTEM}-53" --target test
 }
 
 package_lua-luafilesystem() {
   pkgdesc="File System Library for the Lua Programming Language (mingw-w64)"
   depends=("${MINGW_PACKAGE_PREFIX}-lua")
 
-  cd "${srcdir}/${_realname}-${_tagver}"
+  DESTDIR="${pkgdir}" "${MINGW_PREFIX}"/bin/cmake.exe --install "build-${MSYSTEM}"
 
-  DESTDIR="${pkgdir}" make \
-    "${_options[@]}" \
-    install
-
-  install -Dm644 "${srcdir}/${_realname}-${_tagver}/LICENSE" "${pkgdir}${MINGW_PREFIX}/share/licenses/lua${_lua_ver_short}-${_realname}/LICENSE"
+  install -Dm644 "${srcdir}/${_realname}-${_tagver}/LICENSE" "${pkgdir}${MINGW_PREFIX}/share/licenses/lua-${_realname}/LICENSE"
 }
 
 package_lua51-luafilesystem() {
-  pkgdesc="File System Library for the Lua ${_lua_ver51} Programming Language (mingw-w64)"
+  pkgdesc="File System Library for the Lua 5.1 Programming Language (mingw-w64)"
   depends=("${MINGW_PACKAGE_PREFIX}-lua51")
 
-  cd "${srcdir}/${_realname}-${_tagver}-51"
+  DESTDIR="${pkgdir}" "${MINGW_PREFIX}"/bin/cmake.exe --install "build-${MSYSTEM}-51"
 
-  DESTDIR="${pkgdir}" make \
-    "${_options51[@]}" \
-    install
-
-  install -Dm644 "${srcdir}/${_realname}-${_tagver}-51/LICENSE" "${pkgdir}${MINGW_PREFIX}/share/licenses/lua${_lua_ver_short51}-${_realname}/LICENSE"
+  install -Dm644 "${srcdir}/${_realname}-${_tagver}/LICENSE" "${pkgdir}${MINGW_PREFIX}/share/licenses/lua51-${_realname}/LICENSE"
 }
 
 package_lua53-luafilesystem() {
-  pkgdesc="File System Library for the Lua ${_lua_ver53} Programming Language (mingw-w64)"
+  pkgdesc="File System Library for the Lua 5.3 Programming Language (mingw-w64)"
   depends=("${MINGW_PACKAGE_PREFIX}-lua53")
 
-  cd "${srcdir}/${_realname}-${_tagver}-53"
+  DESTDIR="${pkgdir}" "${MINGW_PREFIX}"/bin/cmake.exe --install "build-${MSYSTEM}-53"
 
-  DESTDIR="${pkgdir}" make \
-    "${_options53[@]}" \
-    install
-
-  install -Dm644 "${srcdir}/${_realname}-${_tagver}-53/LICENSE" "${pkgdir}${MINGW_PREFIX}/share/licenses/lua${_lua_ver_short53}-${_realname}/LICENSE"
+  install -Dm644 "${srcdir}/${_realname}-${_tagver}/LICENSE" "${pkgdir}${MINGW_PREFIX}/share/licenses/lua53-${_realname}/LICENSE"
 }
 
 # generate wrappers
