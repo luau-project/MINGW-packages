@@ -1,0 +1,147 @@
+# Maintainer: luau-project <luau.project@gmail.com>
+
+_realname=wxLua
+pkgbase=mingw-w64-${_realname}
+pkgname=("${MINGW_PACKAGE_PREFIX}-lua-${_realname}"
+         "${MINGW_PACKAGE_PREFIX}-lua51-${_realname}"
+         "${MINGW_PACKAGE_PREFIX}-lua53-${_realname}")
+pkgver=3.2.0.2
+pkgrel=1
+arch=('any')
+mingw_arch=('mingw64' 'ucrt64')
+url='https://github.com/pkulchenko/wxlua'
+license=('spdx:LGPL-2.0-or-later WITH WxWindows-exception-3.1')
+depends=("${MINGW_PACKAGE_PREFIX}-wxwidgets3.0-msw")
+makedepends=("${MINGW_PACKAGE_PREFIX}-cc"
+             "${MINGW_PACKAGE_PREFIX}-cmake"
+             "${MINGW_PACKAGE_PREFIX}-make"
+             "${MINGW_PACKAGE_PREFIX}-lua"
+             "${MINGW_PACKAGE_PREFIX}-lua51"
+             "${MINGW_PACKAGE_PREFIX}-lua53")
+source=("${url}/archive/refs/tags/v${pkgver}.tar.gz"
+        "001-fix-PARSE_WXWIDGETS_LIB_NAMES.patch"
+        "002-fix-wxLuaDebugLib.patch"
+        "003-fix-WXLUA_SHARE_DIR.patch")
+sha256sums=('62abe571803a9748e19e86e39cb0e254fd90a5925dc5f0e35669e693cbdb129e'
+            '0730a2a7a815e7fefb17c6a3c1b0a45e2ddc92f266fad8f69d001fead92958b5'
+            'c1a56ebd4fa4fd15ea0956cd835e4f9f35fbeb84c69308cccd8f94f63a20f8fd'
+            '768f50b9403522177a4137475a2250cc870e414b5cf1a85f379ed9371cdbf958')
+
+prepare() {
+  cd "${srcdir}/${_realname,,}-${pkgver}"
+
+  patch -Np1 -i "${srcdir}/001-fix-PARSE_WXWIDGETS_LIB_NAMES.patch"
+  patch -Np1 -i "${srcdir}/002-fix-wxLuaDebugLib.patch"
+  patch -Np1 -i "${srcdir}/003-fix-WXLUA_SHARE_DIR.patch"
+
+  cp -r "${srcdir}/${_realname,,}-${pkgver}" "${srcdir}/${_realname,,}-${pkgver}-51"
+  cp -r "${srcdir}/${_realname,,}-${pkgver}" "${srcdir}/${_realname,,}-${pkgver}-53" 
+}
+
+build() {
+  declare -a extra_config
+  if check_option "debug" "n"; then
+    extra_config+=("-DCMAKE_BUILD_TYPE=Release")
+  else
+    extra_config+=("-DCMAKE_BUILD_TYPE=Debug")
+  fi
+
+  # current Lua
+  _lua_ver=$(pkgconf --variable=V lua)
+
+  MSYS2_ARG_CONV_EXCL="-DCMAKE_INSTALL_PREFIX=" \
+    "${MINGW_PREFIX}"/bin/cmake.exe \
+      -G "MinGW Makefiles" \
+      -DCMAKE_INSTALL_PREFIX="${MINGW_PREFIX}" \
+      "${extra_config[@]}" \
+      -DBUILD_SHARED_LIBS=ON \
+      -DwxLua_LUA_LIBRARY_VERSION=${_lua_ver} \
+      "-DwxLua_LUA_INCLUDE_DIR=$(pkgconf --variable=includedir lua)" \
+      "-DwxLua_LUA_LIBRARY=$(pkgconf --variable=INSTALL_BIN lua)/lua${_lua_ver//./}.dll" \
+      -DwxLua_LUA_LIBRARY_USE_BUILTIN=OFF \
+      "-DwxWidgets_CONFIG_EXECUTABLE=${MINGW_PREFIX}/bin/wx-config" \
+      -S "${_realname,,}-${pkgver}/${_realname}" \
+      -B "build-${MSYSTEM}"
+
+  "${MINGW_PREFIX}"/bin/cmake.exe --build "build-${MSYSTEM}"
+
+  # Lua 5.1
+  MSYS2_ARG_CONV_EXCL="-DCMAKE_INSTALL_PREFIX=" \
+    "${MINGW_PREFIX}"/bin/cmake.exe \
+      -G "MinGW Makefiles" \
+      -DCMAKE_INSTALL_PREFIX="${MINGW_PREFIX}" \
+      "${extra_config[@]}" \
+      -DBUILD_SHARED_LIBS=ON \
+      -DwxLua_LUA_LIBRARY_VERSION=5.1 \
+      "-DwxLua_LUA_INCLUDE_DIR=$(pkgconf --variable=includedir lua5.1)" \
+      "-DwxLua_LUA_LIBRARY=$(pkgconf --variable=INSTALL_BIN lua5.1)/lua51.dll" \
+      -DwxLua_LUA_LIBRARY_USE_BUILTIN=OFF \
+      "-DwxWidgets_CONFIG_EXECUTABLE=${MINGW_PREFIX}/bin/wx-config" \
+      -S "${_realname,,}-${pkgver}-51/${_realname}" \
+      -B "build-${MSYSTEM}-51"
+
+  "${MINGW_PREFIX}"/bin/cmake.exe --build "build-${MSYSTEM}-51"
+
+  # Lua 5.3
+  MSYS2_ARG_CONV_EXCL="-DCMAKE_INSTALL_PREFIX=" \
+    "${MINGW_PREFIX}"/bin/cmake.exe \
+      -G "MinGW Makefiles" \
+      -DCMAKE_INSTALL_PREFIX="${MINGW_PREFIX}" \
+      "${extra_config[@]}" \
+      -DBUILD_SHARED_LIBS=ON \
+      -DwxLua_LUA_LIBRARY_VERSION=5.3 \
+      "-DwxLua_LUA_INCLUDE_DIR=$(pkgconf --variable=includedir lua5.3)" \
+      "-DwxLua_LUA_LIBRARY=$(pkgconf --variable=INSTALL_BIN lua5.3)/lua53.dll" \
+      -DwxLua_LUA_LIBRARY_USE_BUILTIN=OFF \
+      "-DwxWidgets_CONFIG_EXECUTABLE=${MINGW_PREFIX}/bin/wx-config" \
+      -S "${_realname,,}-${pkgver}-53/${_realname}" \
+      -B "build-${MSYSTEM}-53"
+
+  "${MINGW_PREFIX}"/bin/cmake.exe --build "build-${MSYSTEM}-53"
+}
+
+package_lua-wxLua() {
+  depends+=("${MINGW_PACKAGE_PREFIX}-lua")
+  conflicts=(
+    "${MINGW_PACKAGE_PREFIX}-lua51-${_realname}"
+    "${MINGW_PACKAGE_PREFIX}-lua53-${_realname}"
+  )
+  pkgdesc="wxLua: Lua bindings for wxWidgets cross-platform GUI toolkit; supports Lua 5.1, 5.2, 5.3, 5.4, LuaJIT and wxWidgets 3.x (mingw-w64)"
+
+  DESTDIR="${pkgdir}" "${MINGW_PREFIX}"/bin/cmake.exe --install "build-${MSYSTEM}"
+
+  install -Dm644 "${srcdir}/${_realname,,}-${pkgver}/${_realname}/docs/licence.txt" "${pkgdir}${MINGW_PREFIX}/share/licenses/lua-${_realname}/LICENSE"
+}
+
+package_lua51-wxLua() {
+  depends+=("${MINGW_PACKAGE_PREFIX}-lua51")
+  conflicts=(
+    "${MINGW_PACKAGE_PREFIX}-lua-${_realname}"
+    "${MINGW_PACKAGE_PREFIX}-lua53-${_realname}"
+  )
+  pkgdesc="wxLua: Lua bindings for wxWidgets cross-platform GUI toolkit; supports Lua 5.1, 5.2, 5.3, 5.4, LuaJIT and wxWidgets 3.x (mingw-w64)"
+
+  DESTDIR="${pkgdir}" "${MINGW_PREFIX}"/bin/cmake.exe --install "build-${MSYSTEM}-51"
+
+  install -Dm644 "${srcdir}/${_realname,,}-${pkgver}-51/${_realname}/docs/licence.txt" "${pkgdir}${MINGW_PREFIX}/share/licenses/lua51-${_realname}/LICENSE"
+}
+
+package_lua53-wxLua() {
+  depends+=("${MINGW_PACKAGE_PREFIX}-lua53")
+  conflicts=(
+    "${MINGW_PACKAGE_PREFIX}-lua-${_realname}"
+    "${MINGW_PACKAGE_PREFIX}-lua51-${_realname}"
+  )
+  pkgdesc="wxLua: Lua bindings for wxWidgets cross-platform GUI toolkit; supports Lua 5.1, 5.2, 5.3, 5.4, LuaJIT and wxWidgets 3.x (mingw-w64)"
+
+  DESTDIR="${pkgdir}" "${MINGW_PREFIX}"/bin/cmake.exe --install "build-${MSYSTEM}-53"
+
+  install -Dm644 "${srcdir}/${_realname,,}-${pkgver}-53/${_realname}/docs/licence.txt" "${pkgdir}${MINGW_PREFIX}/share/licenses/lua53-${_realname}/LICENSE"
+}
+
+# generate wrappers
+for _name in "${pkgname[@]}"; do
+  _short="package_${_name#${MINGW_PACKAGE_PREFIX}-}"
+  _func="$(declare -f "${_short}")"
+  eval "${_func/#${_short}/package_${_name}}"
+done

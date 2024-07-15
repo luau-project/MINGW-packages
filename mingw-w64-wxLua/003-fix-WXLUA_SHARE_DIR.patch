@@ -1,0 +1,12 @@
+diff -Naur a/wxLua/CMakeLists.txt b/wxLua/CMakeLists.txt
+--- a/wxLua/CMakeLists.txt	2022-11-07 03:27:27.000000000 -0300
++++ b/wxLua/CMakeLists.txt	2024-07-10 15:46:37.070616921 -0300
+@@ -426,7 +426,7 @@
+ # Install the remaining files
+ # ===========================================================================
+ 
+-if (WIN32)
++if (WIN32 AND NOT MINGW)
+     set(WXLUA_SHARE_DIR "")
+ else()
+     set(WXLUA_SHARE_DIR "share/wxlua/")

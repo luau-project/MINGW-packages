@@ -1,0 +1,12 @@
+diff -Naur a/wxLua/build/CMakewxAppLib.cmake b/wxLua/build/CMakewxAppLib.cmake
+--- a/wxLua/build/CMakewxAppLib.cmake	2022-11-07 03:27:27.000000000 -0300
++++ b/wxLua/build/CMakewxAppLib.cmake	2024-07-10 15:38:11.291383156 -0300
+@@ -484,7 +484,7 @@
+ 
+     # wxWidgets lib/dll build using configure and MinGW (libwx_mswu_core-3.0.a)
+     if ("${wxWidgets_PORTNAME}" STREQUAL "")
+-        string(REGEX MATCH "libwx_(msw)(univ)?(u)?(d)?_core-([0-9]\\.[0-9])\\.a" _match_mingw "${wxWidgets_LIBRARIES}")
++        string(REGEX MATCH "wx_(msw)(univ)?(u)?(d)?_core\\-([0-9]\\.[0-9])" _match_mingw "${wxWidgets_LIBRARIES}")
+ 
+         if (NOT "${_match_mingw}" STREQUAL "")
+             set(wxWidgets_PORTNAME    "${CMAKE_MATCH_1}" )

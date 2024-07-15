@@ -1,0 +1,11 @@
+diff -Naur a/wxLua/modules/CMakeLists.txt b/wxLua/modules/CMakeLists.txt
+--- a/wxLua/modules/CMakeLists.txt	2022-11-07 03:27:27.000000000 -0300
++++ b/wxLua/modules/CMakeLists.txt	2024-07-10 13:57:12.133525572 -0300
+@@ -363,6 +363,7 @@
+         ${wxLua_ROOT_DIR}/modules/wxlua/debug/wxlstack.cpp
+     LINK_LIBRARIES
+         wxLuaLib
++	${MINGW_EXTRA_LIBS}
+     ${WXLUALIB_PROPERTIES_DEFINE_SYMBOL}
+     PROPERTIES FOLDER "wxLua/Modules"
+     INSTALL "${WXLUA_LIB_INSTALL_FLAGS}")
