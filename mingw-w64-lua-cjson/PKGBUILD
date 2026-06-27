@@ -7,7 +7,7 @@ pkgname=("${MINGW_PACKAGE_PREFIX}-lua-${_pkgsuffix}"
          "${MINGW_PACKAGE_PREFIX}-lua51-${_pkgsuffix}"
          "${MINGW_PACKAGE_PREFIX}-lua53-${_pkgsuffix}"
          "${MINGW_PACKAGE_PREFIX}-lua54-${_pkgsuffix}")
-pkgver=2.1.0.17
+pkgver=2.1.0.18
 pkgrel=1
 arch=('any')
 mingw_arch=('mingw64' 'ucrt64' 'clang64' 'clangarm64')
@@ -21,7 +21,7 @@ makedepends=("${MINGW_PACKAGE_PREFIX}-cc"
              "${MINGW_PACKAGE_PREFIX}-lua54"
              "${MINGW_PACKAGE_PREFIX}-pkgconf")
 source=("${url}/archive/${pkgver}/${_realname}-${pkgver}.tar.gz")
-sha256sums=('510062d471fc9c4cd87b367a7b879c7a5f2af70513d97708842d097614d96188')
+sha256sums=('12a61858e47ddaf335cad20d4690683447ffa5d8dbce9e3146818fa60c00ac8e')
 
 prepare() {
   # current Lua
